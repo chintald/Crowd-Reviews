@@ -2,8 +2,10 @@ import graphene
 
 from graphql_auth.schema import UserQuery, MeQuery
 
+from api.account.schema import AccountQueries
 
-class Query(UserQuery, MeQuery, graphene.ObjectType):
+
+class Query(AccountQueries):
     pass
 
 

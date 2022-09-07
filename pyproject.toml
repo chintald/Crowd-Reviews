@@ -12,6 +12,10 @@ Django = "3.2.5"
 graphene-django = "^2.15.0"
 django-graphql-jwt = "0.3.0"
 django-graphql-auth = "^0.3.16"
+opentracing = "^2.4.0"
+django-cors-headers = "3.7.0"
+PyMySQL = "^1.0.2"
+pip = "22.2.2"
 
 [tool.poetry.dev-dependencies]
 
