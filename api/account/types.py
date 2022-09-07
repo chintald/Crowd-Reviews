@@ -8,7 +8,7 @@ class User(CountableDjangoObjectType):
     email = graphene.String()
 
     class Meta:
-        description="Represents User Node"
+        description = "Represents User Node"
         interfaces = [graphene.relay.Node, ]
         model = get_user_model()
 

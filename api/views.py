@@ -9,7 +9,8 @@ import opentracing
 import opentracing.tags
 from django.conf import settings
 from django.db import connection
-from django.db.backends.mysql.base import DatabaseWrapper
+from django.db.backends.postgresql.base import DatabaseWrapper
+
 from django.http import HttpRequest, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -60,7 +61,7 @@ def tracing_wrapper(execute, sql, params, many, context):
         span.set_tag(opentracing.tags.DATABASE_TYPE, conn.display_name)
         span.set_tag(opentracing.tags.PEER_HOSTNAME, conn.settings_dict.get("HOST"))
         span.set_tag(opentracing.tags.PEER_PORT, conn.settings_dict.get("PORT"))
-        span.set_tag("service.name", "mysql")
+        span.set_tag("service.name", "postgres")
         span.set_tag("span.type", "sql")
         return execute(sql, params, many, context)
 
