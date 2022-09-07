@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import ast
 import os
-
+from datetime import timedelta
 import environ
 from pathlib import Path
 
@@ -196,3 +196,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REAL_IP_ENVIRON = os.environ.get("REAL_IP_ENVIRON", "REMOTE_ADDR")
 ALLOWED_GRAPHQL_ORIGINS = get_list(os.environ.get("ALLOWED_GRAPHQL_ORIGINS", "*"))
 PLAYGROUND_ENABLED = get_bool_from_env("PLAYGROUND_ENABLED", True)
+JWT_TTL_ACCESS = timedelta(minutes=2)
