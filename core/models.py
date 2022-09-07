@@ -5,4 +5,7 @@ from django.db import models
 
 
 class User(AbstractUser):
-    pass
+    email = models.EmailField(blank=False, max_length=254, verbose_name="Email Address")
+    USERNAME_FIELD = "username"
+    EMAIL_FIELD = "email"
+
