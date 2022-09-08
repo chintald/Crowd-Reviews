@@ -1,11 +1,11 @@
-# Welcome to CrowReviews Django Repo
+# Welcome to CrowdReviews Django Repo
 
 ## This file will guide you through the installation of the project
 
 ### Please make sure you have the following technologies installed on your computer beforehand
-
-1. [Poetry](https://python-poetry.org/docs/)
-2. [MySql with Workbench](https://dev.mysql.com/downloads/installer/)
+1. [Python](https://www.python.org/downloads/) (Please make sure the version is 3.9 or above)
+2. [Poetry](https://python-poetry.org/docs/)
+3. [MySql with Workbench](https://dev.mysql.com/downloads/installer/)
 
 ### To Install this project, open it in pycharm and run the following command in the terminal
 
