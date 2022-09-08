@@ -77,7 +77,9 @@ def create_access_token(
     payload = jwt_user_payload(
         user, JWT_ACCESS_TYPE, settings.JWT_TTL_ACCESS, additional_payload
     )
-    return jwt_encode(payload)
+    token_bytes = str(jwt_encode(payload))
+    token = token_bytes[1:].strip("'")
+    return token
 
 
 # def create_refresh_token(
@@ -111,10 +113,11 @@ def get_user_from_payload(payload: Dict[str, Any]) -> Optional[USER]:
     user_qs = USER.objects.filter(username=payload["username"])
     user_obj = user_qs.first()
     user_jwt_token = payload.get("token")
-    if user_obj is not None:
-        if user_obj.is_blocked:
-            raise ValidationError("Your account has been inactivated, kindly contact your administrator.")
-    user = user_qs.filter(is_active=True).first()
+    # if user_obj is not None:
+    #     if user_obj.is_blocked:
+    #         raise ValidationError("Your account has been inactivated, kindly contact your administrator.")
+    # user = user_qs.filter(is_active=True).first()
+    user = user_obj
     if not user_jwt_token or not user:
         raise jwt.InvalidTokenError(
             "Invalid token. Create new one by using tokenCreate mutation."

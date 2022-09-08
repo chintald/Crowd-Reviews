@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import ast
 import os
+import warnings
 from datetime import timedelta
 import environ
 from pathlib import Path
@@ -50,6 +51,8 @@ def get_bool_from_env(name, default_value):
     return default_value
 
 
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
@@ -86,22 +89,49 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
 ]
+
+ENABLE_DEBUG_TOOLBAR = False
+
+if ENABLE_DEBUG_TOOLBAR:
+    # Ensure the graphiql debug toolbar is actually installed before adding it
+    try:
+        __import__("graphiql_debug_toolbar")
+    except ImportError as exc:
+        msg = (
+            f"{exc} -- Install the missing dependencies by "
+            f"running `pip install -r requirements_dev.txt`"
+        )
+        warnings.warn(msg)
+    else:
+        INSTALLED_APPS += ["django.forms", "debug_toolbar", "graphiql_debug_toolbar"]
+        MIDDLEWARE.append("api.middleware.DebugToolbarMiddleware")
+
+        DEBUG_TOOLBAR_PANELS = [
+            "ddt_request_history.panels.request_history.RequestHistoryPanel",
+            "debug_toolbar.panels.timer.TimerPanel",
+            "debug_toolbar.panels.headers.HeadersPanel",
+            "debug_toolbar.panels.request.RequestPanel",
+            "debug_toolbar.panels.sql.SQLPanel",
+            "debug_toolbar.panels.profiling.ProfilingPanel",
+        ]
+        DEBUG_TOOLBAR_CONFIG = {"RESULTS_CACHE_SIZE": 100}
 
 CORS_ALLOW_ALL_ORIGINS = True
 
 GRAPHENE = {
     'SCHEMA': 'api.schema.schema',
     'MIDDLEWARE': [
-        'graphql_jwt.middleware.JSONWebTokenMiddleware',
+        'api.middleware.JWTMiddleware',
     ],
 }
 
 AUTHENTICATION_BACKENDS = [
+    'core.auth_backend.JSONWebTokenBackend',
+    'core.auth_backend.EmailOrUsernameModelBackend',
     'graphql_jwt.backends.JSONWebTokenBackend',
     'django.contrib.auth.backends.ModelBackend',
     "graphql_auth.backends.GraphQLAuthBackend",
@@ -199,4 +229,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REAL_IP_ENVIRON = os.environ.get("REAL_IP_ENVIRON", "REMOTE_ADDR")
 ALLOWED_GRAPHQL_ORIGINS = get_list(os.environ.get("ALLOWED_GRAPHQL_ORIGINS", "*"))
 PLAYGROUND_ENABLED = get_bool_from_env("PLAYGROUND_ENABLED", True)
-JWT_TTL_ACCESS = timedelta(minutes=2)
+
+"""JWT"""
+JWT_TTL_ACCESS = timedelta(minutes=15)
+JWT_EXPIRE = True

@@ -1,6 +1,5 @@
 import graphene
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
 from django.utils.crypto import get_random_string
@@ -8,14 +7,14 @@ from django.utils.crypto import get_random_string
 from api.account.types import User
 from api.auth.exceptions import UserAccount
 from api.auth.inputs import LoginInput, SigninInput
-
+from api.jwt import create_access_token
 
 UserModel = get_user_model()
 
 
 class UserSignupMutation(graphene.Mutation):
     success = graphene.Boolean(default_value=False)
-    data = graphene.Field(User)
+    user = graphene.Field(User)
 
     class Arguments:
         input = SigninInput(description="Fields required to ")
@@ -23,17 +22,16 @@ class UserSignupMutation(graphene.Mutation):
     @classmethod
     def mutate(cls, root, info, input):
         success = False
-        data = None
+        user = None
         credentials_valid = cls.check_user_credentials(input)
         if credentials_valid:
             create_user = UserModel(email=input.email, username=input.username)
             create_user.set_password(input.password)
             incorrect_password = validate_password(password=input.password, user=create_user)
-
             create_user.save()
             success = True
-            data = create_user
-        return UserSignupMutation(success=success, data=data)
+            user = create_user
+        return UserSignupMutation(success=success, user=user)
 
     @classmethod
     def check_user_credentials(cls, input):
@@ -66,29 +64,37 @@ class UserSignupMutation(graphene.Mutation):
 
 class UserLoginMutation(graphene.Mutation):
     success = graphene.Boolean()
-    data = graphene.Field(User)
+    user = graphene.Field(User)
+    access_token = graphene.String()
 
     class Arguments:
         input = LoginInput(description="Fields required to login to your account", required=True)
 
     @classmethod
     def mutate(cls, root, info, input):
-        email_or_username = input.email
-        try:
-            user_obj_query = UserModel.objects.filter(Q(email=email_or_username) | Q(username=email_or_username))
-            if user_obj_query.count() == 1:
-                is_password_valid = user_obj_query.first().check_password(input.password)
-                if not is_password_valid:
-                    raise UserAccount.CredentialsNotValid()
-            # user_obj.jwt_token_key = get_random_string()
-            # user_obj.save()
-
+        access_token = None
+        user = None
+        success = False
+        email_or_username = input.email_or_username
+        user_obj_query = UserModel.objects.filter(Q(email=email_or_username) | Q(username=email_or_username))
+        user_obj = cls.check_login_credentials(user_obj_query, input.password)
+        if user_obj:
+            access_token = create_access_token(user_obj)
             success = True
-            data = user_obj_query
+            user = user_obj
+        return UserLoginMutation(success=success, user=user, access_token=access_token)
 
-        except UserModel.DoesNotExist:
-            success = False
-            error_message = UserAccount().CredentialsNotValid()
-            data = None
-
-        return UserLoginMutation(success=success, data=data)
+    @classmethod
+    def check_login_credentials(cls, user_query, password):
+        if user_query.count() == 1:
+            user_obj = user_query.first()
+            is_password_valid = user_obj.check_password(password)
+            if not is_password_valid:
+                raise UserAccount.CredentialsNotValid()
+            user_obj.jwt_token_key = get_random_string()
+            user_obj.save()
+        elif not user_query:
+            raise UserAccount.UserDoesNotExist()
+        else:
+            raise UserAccount.ServerError()
+        return user_obj

@@ -27,3 +27,17 @@ class UserAccount():
             if message is None:
                 message = default_message
             super().__init__(message)
+
+    class UserDoesNotExist(Exception):
+        def __init__(self, message=None):
+            default_message = ['Please create an account first.']
+            if message is None:
+                message = default_message
+            super().__init__(message)
+
+    class ServerError(Exception):
+        def __init__(self, message=None):
+            default_message = ['An error occurred, please contact support team.']
+            if message is None:
+                message = default_message
+            super().__init__(message)
