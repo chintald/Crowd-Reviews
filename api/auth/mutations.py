@@ -1,9 +1,12 @@
 import graphene
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
 from django.utils.crypto import get_random_string
 
 from api.account.types import User
-from api.auth.exceptions import UserCredentials
+from api.auth.exceptions import UserAccount
 from api.auth.inputs import LoginInput, SigninInput
 
 
@@ -13,7 +16,6 @@ UserModel = get_user_model()
 class UserSignupMutation(graphene.Mutation):
     success = graphene.Boolean(default_value=False)
     data = graphene.Field(User)
-    error_message = graphene.String()
 
     class Arguments:
         input = SigninInput(description="Fields required to ")
@@ -22,47 +24,47 @@ class UserSignupMutation(graphene.Mutation):
     def mutate(cls, root, info, input):
         success = False
         data = None
-        is_new_user, error_message = cls.check_user(input)
-        if is_new_user:
-            create_user = UserModel(email=input.email, password=input.password)
+        credentials_valid = cls.check_user_credentials(input)
+        if credentials_valid:
+            create_user = UserModel(email=input.email, username=input.username)
+            create_user.set_password(input.password)
+            incorrect_password = validate_password(password=input.password, user=create_user)
+
             create_user.save()
             success = True
             data = create_user
-
-        return UserSignupMutation(success=success, error_message=error_message, data=data)
-
-
-
+        return UserSignupMutation(success=success, data=data)
 
     @classmethod
-    def check_user(cls, input):
-        is_new_user = False
-        error_message = None
+    def check_user_credentials(cls, input):
+        credentials_valid = False
 
         password = input.password
         confirm_password = input.confirm_password
         email = input.email
+        username = input.username
 
         if password != confirm_password:
-            error_message = UserCredentials().credentials_not_valid()
+            raise UserAccount().CredentialsNotValid()
+
+        user_query = UserModel.objects.filter(username=username)
+        if user_query.count() > 0:
+            check_same_user = user_query.filter(email=input.email).count()
+            if check_same_user > 0:
+                raise UserAccount().UserAlreadyExist()
+            raise UserAccount().UsernameExist()
 
         try:
             user_obj = UserModel.objects.get(email=email)
             if user_obj:
-                error_message = UserCredentials().user_already_exist()
+                raise UserAccount().UserAlreadyExist()
         except UserModel.DoesNotExist:
-            is_new_user = True
+            credentials_valid = True
 
-        return is_new_user, error_message
-
-
-
-
-
+        return credentials_valid
 
 
 class UserLoginMutation(graphene.Mutation):
-    error_message = graphene.String()
     success = graphene.Boolean()
     data = graphene.Field(User)
 
@@ -71,19 +73,22 @@ class UserLoginMutation(graphene.Mutation):
 
     @classmethod
     def mutate(cls, root, info, input):
-        email = input.email
+        email_or_username = input.email
         try:
-            user_obj = UserModel.objects.get(email=email)
-            user_obj.jwt_token_key = get_random_string()
-            user_obj.save()
+            user_obj_query = UserModel.objects.filter(Q(email=email_or_username) | Q(username=email_or_username))
+            if user_obj_query.count() == 1:
+                is_password_valid = user_obj_query.first().check_password(input.password)
+                if not is_password_valid:
+                    raise UserAccount.CredentialsNotValid()
+            # user_obj.jwt_token_key = get_random_string()
+            # user_obj.save()
 
             success = True
-            data = user_obj
-            error_message = None
+            data = user_obj_query
 
         except UserModel.DoesNotExist:
             success = False
-            error_message = "Please check the credentials."
+            error_message = UserAccount().CredentialsNotValid()
             data = None
 
-        return UserLoginMutation(success=success, data=data, error_message=error_message)
+        return UserLoginMutation(success=success, data=data)
