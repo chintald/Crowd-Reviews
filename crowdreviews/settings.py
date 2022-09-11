@@ -79,9 +79,10 @@ INSTALLED_APPS = [
     "graphql_auth",
     'django_filters',
     'core',
+    'users',
 ]
 
-AUTH_USER_MODEL = 'core.User'
+AUTH_USER_MODEL = 'users.User'
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
